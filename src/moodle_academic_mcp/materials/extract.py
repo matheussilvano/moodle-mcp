@@ -176,7 +176,25 @@ def extract_pptx(data: bytes) -> Extracted:
 
 def _odf_paragraphs(el: ET.Element) -> list[str]:
     t = "{urn:oasis:names:tc:opendocument:xmlns:text:1.0}"
-    return ["".join(p.itertext()) for p in el.iter() if p.tag in (t + "p", t + "h")]
+
+    def inline_text(node: ET.Element) -> str:
+        if node.tag == t + "tab":
+            content = "\t"
+        elif node.tag == t + "line-break":
+            content = "\n"
+        elif node.tag == t + "s":
+            count = int(node.get(t + "c", "1"))
+            if count < 1 or count > MAX_ZIP_MEMBER:
+                raise ValueError("ODF repeated-space count is outside the extraction limit")
+            content = " " * count
+        else:
+            content = (node.text or "") + "".join(inline_text(child) for child in node)
+        return content + (node.tail or "")
+
+    def paragraph_text(node: ET.Element) -> str:
+        return (node.text or "") + "".join(inline_text(child) for child in node)
+
+    return [paragraph_text(p) for p in el.iter() if p.tag in (t + "p", t + "h")]
 
 
 def extract_odf(data: bytes) -> Extracted:

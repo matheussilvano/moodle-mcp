@@ -93,6 +93,18 @@ def test_odt_ods_odp_text_and_locations():
     assert "Slide dois" in ex.chunks[1][1]
 
 
+def test_odf_preserves_tab_line_break_and_repeated_spaces():
+    odt = make_odf(
+        "application/vnd.oasis.opendocument.text",
+        "<office:text><text:p>Nome<text:tab/>Nota</text:p>"
+        "<text:p>Linha um<text:line-break/>linha dois</text:p>"
+        "<text:p>a<text:s text:c='3'/>b</text:p></office:text>",
+    )
+
+    ex = extract("a.odt", odt)
+    assert ex.chunks[0][1] == "Nome\tNota\nLinha um\nlinha dois\na   b\n"
+
+
 def test_pdf_page_references_and_scanned_detection():
     ex = extract("a.pdf", make_pdf(["Normalizacao 3FN", "Transacoes ACID"]))
     assert (
